@@ -5,6 +5,9 @@ COPY . /var/task/
 
 RUN yum update -y && yum install -y curl && yum install -y jq && yum clean all
 RUN curl -sL https://sentry.io/get-cli/ | bash
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN sudo ./aws/install
 
 COPY bootstrap ${LAMBDA_RUNTIME_DIR}
 RUN chmod 755 ${LAMBDA_RUNTIME_DIR}/bootstrap
