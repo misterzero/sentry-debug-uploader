@@ -24,16 +24,22 @@ function handler () {
   if [ "$S3_OBJECT" == "$MAPPING_FILENAME" ]
   then
     # Download mapping file and UUID file
-    aws s3 sync s3://$S3_BUCKET/$MAPPING_FILENAME $MAPPING_FILE_TMP
-    aws s3 sync s3://$S3_BUCKET/$UUID_FILENAME $UUID_FILE_TMP
+    aws s3 sync s3://$S3_BUCKET /tmp --no-progress
     echo "Downloaded mapping and UUID files" 1>&2;
+    DIRLIST=$(ls -ahl /tmp)
 
     # Read UUID from file
     UUID=`cat $UUID_FILE_TMP`
     echo "UUID: '$UUID'" 1>&2;
 
-    # Get Sentry auth token from secrets manager
-    SENTRY_AUTH_TOKEN=$(aws secretsmanager get-secret-value --secret-id $SENTRY_AUTH_TOKEN_SECRET)
+    # Get Sentry auth token from secrets manager if not cached
+    if [ -z ${SENTRY_AUTH_TOKEN+x} ]
+      then
+        echo "Getting auth token" 1>&2;
+        SENTRY_AUTH_TOKEN=$(aws secretsmanager get-secret-value --secret-id $SENTRY_AUTH_TOKEN_SECRET | jq -r '.SecretString')
+      else
+        echo "Using cached auth token" 1>&2;
+    fi
 
     # Pass mapping file and UUID to sentry-cli
     RESPONSE=$(sentry-cli --auth-token $SENTRY_AUTH_TOKEN upload-proguard --uuid $UUID $MAPPING_FILE_TMP)
